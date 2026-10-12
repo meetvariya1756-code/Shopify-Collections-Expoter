@@ -59,3 +59,64 @@ model ActivityLog {
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
+
+model Collection {
+  id              String   @id @default(uuid())
+  shop            String
+  shopifyId       String?
+  title           String
+  handle          String
+  type            String   // "smart" or "custom"
+  descriptionHtml String?  @db.Text
+  sortOrder       String?  @default("best-selling")
+  rules           Json?    // Array of rule conditions
+  disjunctive     Boolean  @default(false)
+  productCount    Int      @default(0)
+  imageUrl        String?  @db.Text
+  imageAlt        String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([shop, handle])
+  @@index([shop])
+}
+
+model ExportHistory {
+  id               String   @id @default(uuid())
+  shop             String
+  fileName         String
+  totalCollections Int      @default(0)
+  fileSize         Int?
+  exportedBy       String?
+  createdAt        DateTime @default(now())
+
+  @@index([shop])
+}
+
+model ImportHistory {
+  id           String       @id @default(uuid())
+  shop         String
+  fileName     String
+  totalRows    Int          @default(0)
+  successCount Int          @default(0)
+  errorCount   Int          @default(0)
+  status       String       @default("COMPLETED")
+  importedBy   String?
+  createdAt    DateTime     @default(now())
+  items        ImportItem[]
+
+  @@index([shop])
+}
+
+model ImportItem {
+  id           String        @id @default(uuid())
+  importJobId  String
+  handle       String
+  title        String
+  status       String        // "SUCCESS" | "FAILED" | "SKIPPED"
+  errorMessage String?       @db.Text
+  createdAt    DateTime      @default(now())
+  importJob    ImportHistory @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+
+  @@index([importJobId])
+}

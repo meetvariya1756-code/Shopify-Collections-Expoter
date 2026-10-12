@@ -23,9 +23,9 @@ export default function DashboardPage() {
   const [stagedCollections, setStagedCollections] = useState([]);
   const [showGuide, setShowGuide] = useState(false);
   const [buildCommit, setBuildCommit] = useState(
-    process.env.NEXT_PUBLIC_RENDER_GIT_COMMIT
-      ? process.env.NEXT_PUBLIC_RENDER_GIT_COMMIT.slice(0, 7)
-      : ''
+    process.env.NEXT_PUBLIC_GIT_COMMIT
+      ? process.env.NEXT_PUBLIC_GIT_COMMIT.slice(0, 7)
+      : (process.env.NEXT_PUBLIC_APP_VERSION || '')
   );
 
   useEffect(() => {

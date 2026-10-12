@@ -203,9 +203,9 @@ export async function POST(request) {
 
     let userFacingError = 'Internal server error during authentication.';
     if (isDbTableMissing) {
-      userFacingError = 'Database tables not initialized. Please ensure "npx prisma db push" is run on Render.';
+      userFacingError = 'Database tables not initialized. Please ensure "npx prisma db push" has been run.';
     } else if (isDbConnError) {
-      userFacingError = 'Database connection error. Please verify DATABASE_URL in Render environment variables.';
+      userFacingError = 'Database connection error. Please verify DATABASE_URL in your environment variables.';
     }
 
     return NextResponse.json(
