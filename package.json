@@ -1,0 +1,33 @@
+{
+  "name": "shopify-collections-exporter",
+  "version": "1.0.0",
+  "description": "Export and Import Shopify Collections with Excel (.xlsx) support",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "seed": "node scripts/seed.js",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "@shopify/shopify-api": "^15.0.1",
+    "axios": "^1.7.9",
+    "bcryptjs": "^3.0.3",
+    "canvas-confetti": "^1.9.3",
+    "jose": "^6.2.12",
+    "lucide-react": "^0.462.0",
+    "next": "^14.2.15",
+    "prisma": "^5.22.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.15"
+  }
+}

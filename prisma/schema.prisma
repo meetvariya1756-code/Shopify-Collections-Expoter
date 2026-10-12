@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Shop {
+  id            String    @id @default(uuid())
+  shop          String    @unique
+  accessToken   String
+  scope         String?
+  installedAt   DateTime  @default(now())
+  uninstalledAt DateTime?
+}
+
+model ShopLink {
+  id              String   @id @default(uuid())
+  sourceShop      String
+  destinationShop String
+  createdAt       DateTime @default(now())
+
+  @@unique([sourceShop, destinationShop])
+}
+
+model OAuthState {
+  id          String   @id @default(uuid())
+  state       String   @unique
+  shop        String   // source shop
+  destination String   // destination shop
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model User {
+  id                  String        @id @default(uuid())
+  displayName         String
+  username            String        @unique
+  passwordHash        String
+  role                String        @default("user") // "user" | "admin"
+  status              String        @default("active") // "active" | "disabled"
+  failedLoginAttempts Int           @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime      @default(now())
+  lastLoginAt         DateTime?
+  activityLogs        ActivityLog[]
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  username  String
+  action    String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
