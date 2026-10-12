@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server.js';
 import { fetchAllCollections } from '../../../../lib/shopify.js';
 import { requireAuth } from '../../../../lib/auth.js';
+import prisma from '../../../../lib/prisma.js';
 import {
   normalizeShopifyDomain,
   getShopLink,
@@ -60,6 +61,52 @@ export async function POST(request) {
     }
 
     const result = await fetchAllCollections(requestedShop, targetToken, options);
+
+    // Sync fetched collections into database Collection table
+    if (result?.collections && Array.isArray(result.collections) && result.collections.length > 0) {
+      try {
+        for (const col of result.collections) {
+          const handle = col.handle || col.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'untitled';
+          await prisma.collection.upsert({
+            where: {
+              shop_handle: {
+                shop: requestedShop,
+                handle
+              }
+            },
+            update: {
+              shopifyId: col.id ? String(col.id) : undefined,
+              title: col.title || '',
+              type: (col.collection_type === 'custom' || col.type === 'manual') ? 'custom' : 'smart',
+              descriptionHtml: col.body_html || col.description || '',
+              sortOrder: col.sort_order || 'best-selling',
+              rules: col.rules ? col.rules : undefined,
+              disjunctive: Boolean(col.disjunctive),
+              productCount: typeof col.products_count === 'number' ? col.products_count : (typeof col.productsCount === 'number' ? col.productsCount : 0),
+              imageUrl: col.image?.src || (typeof col.imageUrl === 'string' ? col.imageUrl : null),
+              imageAlt: col.image?.alt || (typeof col.imageAlt === 'string' ? col.imageAlt : null)
+            },
+            create: {
+              shop: requestedShop,
+              shopifyId: col.id ? String(col.id) : undefined,
+              title: col.title || '',
+              handle,
+              type: (col.collection_type === 'custom' || col.type === 'manual') ? 'custom' : 'smart',
+              descriptionHtml: col.body_html || col.description || '',
+              sortOrder: col.sort_order || 'best-selling',
+              rules: col.rules ? col.rules : undefined,
+              disjunctive: Boolean(col.disjunctive),
+              productCount: typeof col.products_count === 'number' ? col.products_count : (typeof col.productsCount === 'number' ? col.productsCount : 0),
+              imageUrl: col.image?.src || (typeof col.imageUrl === 'string' ? col.imageUrl : null),
+              imageAlt: col.image?.alt || (typeof col.imageAlt === 'string' ? col.imageAlt : null)
+            }
+          });
+        }
+      } catch (dbSyncErr) {
+        console.error('[FETCH_COLLECTIONS_DB_SYNC_ERROR] Could not sync collections to database:', dbSyncErr);
+      }
+    }
+
     return NextResponse.json({ success: true, ...result });
   } catch (err) {
     console.error('[FETCH_COLLECTIONS_ERROR]', err);

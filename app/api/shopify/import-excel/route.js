@@ -4,6 +4,7 @@ import {
   importSessionStoreBatchGraphQL
 } from '../../../../lib/shopify.js';
 import { requireAuth, recordActivity } from '../../../../lib/auth.js';
+import prisma from '../../../../lib/prisma.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -211,6 +212,70 @@ export async function POST(request) {
             details: `Completed Excel import into "${targetShop}": Created ${results.created}, Updated ${results.updated}, Skipped ${results.skipped}, Failed ${results.failed}.`,
             ipAddress: clientIp
           });
+
+          // Save import history, item logs, and upsert collections into database
+          try {
+            const successCount = (results.created || 0) + (results.updated || 0);
+            const errorCount = results.failed || 0;
+
+            await prisma.importHistory.create({
+              data: {
+                shop: targetShop,
+                fileName: options?.fileName || `import-${Date.now()}.xlsx`,
+                totalRows: importableCollections.length,
+                successCount,
+                errorCount,
+                status: errorCount === 0 ? 'COMPLETED' : (successCount > 0 ? 'PARTIAL' : 'FAILED'),
+                importedBy: sessionUser.username || sessionUser.shop || 'user',
+                items: {
+                  create: (results.details || []).map((d) => ({
+                    handle: d.handle || 'unknown',
+                    title: d.title || 'Untitled',
+                    status: (d.status === 'created' || d.status === 'updated') ? 'SUCCESS' : (d.status === 'skipped' ? 'SKIPPED' : 'FAILED'),
+                    errorMessage: d.error || d.reason || null
+                  }))
+                }
+              }
+            });
+
+            // Upsert imported collections into Collection master table
+            for (const col of importableCollections) {
+              const handle = col.handle || col.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'untitled';
+              await prisma.collection.upsert({
+                where: {
+                  shop_handle: {
+                    shop: targetShop,
+                    handle
+                  }
+                },
+                update: {
+                  title: col.title || '',
+                  type: (col.collection_type === 'custom' || col.type === 'custom' || col.type === 'manual') ? 'custom' : 'smart',
+                  descriptionHtml: col.body_html || col.description_html || '',
+                  sortOrder: col.sort_order || 'best-selling',
+                  rules: col.rules || undefined,
+                  disjunctive: Boolean(col.disjunctive),
+                  imageUrl: col.image?.src || col.image_url || null,
+                  imageAlt: col.image?.alt || col.image_alt || null
+                },
+                create: {
+                  shop: targetShop,
+                  title: col.title || '',
+                  handle,
+                  type: (col.collection_type === 'custom' || col.type === 'custom' || col.type === 'manual') ? 'custom' : 'smart',
+                  descriptionHtml: col.body_html || col.description_html || '',
+                  sortOrder: col.sort_order || 'best-selling',
+                  rules: col.rules || undefined,
+                  disjunctive: Boolean(col.disjunctive),
+                  productCount: 0,
+                  imageUrl: col.image?.src || col.image_url || null,
+                  imageAlt: col.image?.alt || col.image_alt || null
+                }
+              });
+            }
+          } catch (dbErr) {
+            console.error('[IMPORT_DB_SAVE_ERROR] Failed to save import history to database:', dbErr);
+          }
 
           sendEvent('complete', {
             message: `Import completed into ${targetShop}! Created: ${results.created}, Updated: ${results.updated}, Skipped: ${results.skipped}, Failed: ${results.failed}`,
