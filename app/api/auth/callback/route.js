@@ -164,6 +164,14 @@ export async function GET(request) {
 
     console.log(`[SHOPIFY_OAUTH] Successfully obtained & encrypted token for shop: ${shop}`);
 
+    // Automatically register collections/delete webhook with Shopify
+    try {
+      const { registerCollectionDeleteWebhook } = await import('../../../../lib/shopify.js');
+      await registerCollectionDeleteWebhook(shop, accessToken);
+    } catch (whErr) {
+      console.warn('[SHOPIFY_OAUTH] Could not register collections/delete webhook:', whErr.message);
+    }
+
     // 6. If this was a destination store OAuth, establish the ShopLink
     if (isDestinationLink && sourceShop) {
       await createShopLink(sourceShop, shop);

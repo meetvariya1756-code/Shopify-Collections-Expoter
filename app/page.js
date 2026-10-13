@@ -315,6 +315,32 @@ export default function DashboardPage() {
           }
         }
 
+        // Direct localhost browser fallback: fetch active installed store from database
+        try {
+          const storeRes = await axios.get('/api/shopify/active-store');
+          if (storeRes.data?.success && storeRes.data?.store && mounted) {
+            const currentShop = storeRes.data.store;
+            setShopDomain(currentShop.domain);
+            setSourceStore(currentShop);
+
+            // Fetch linked destination store if any
+            try {
+              const destRes = await axios.get('/api/shopify/destination');
+              if (destRes.data?.connected && destRes.data?.destinationShop && mounted) {
+                setTargetStore({
+                  shopUrl: destRes.data.destinationShop,
+                  domain: destRes.data.destinationShop,
+                  name: destRes.data.destinationShop.replace('.myshopify.com', '')
+                });
+              }
+            } catch (_) {}
+
+            setShopifyAuthorizing(false);
+            fetchCollectionsFromStore(currentShop);
+            return;
+          }
+        } catch (_) {}
+
         if (mounted) {
           setShopifyAuthorizing(false);
         }

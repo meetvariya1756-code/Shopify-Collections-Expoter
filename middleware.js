@@ -18,7 +18,8 @@ const PUBLIC_PATHS = [
   '/api/auth/session',
   '/api/auth',
   '/api/auth/callback',
-  '/api/shopify/auth/callback'
+  '/api/shopify/auth/callback',
+  '/api/webhooks'
 ];
 
 export async function middleware(request) {

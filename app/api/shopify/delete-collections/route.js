@@ -3,6 +3,7 @@ import {
   deleteCollectionsByHandlesGraphQL
 } from '../../../../lib/shopify.js';
 import { requireAuth, recordActivity } from '../../../../lib/auth.js';
+import prisma from '../../../../lib/prisma.js';
 import {
   normalizeShopifyDomain,
   getShopLink,
@@ -108,6 +109,59 @@ export async function POST(request) {
               { mode, collectionIds },
               (progress) => sendEvent('progress', progress)
             );
+          }
+
+          // Sync database: Remove deleted collections from Collection table
+          try {
+            const deletedHandles = (results.details || [])
+              .filter(d => d.status === 'deleted' && d.handle)
+              .map(d => d.handle);
+
+            const deletedIds = (results.details || [])
+              .filter(d => d.status === 'deleted' && d.id)
+              .map(d => String(d.id).replace(/\D/g, ''));
+
+            const deleteConditions = [];
+            if (deletedHandles.length > 0) {
+              deleteConditions.push({ handle: { in: deletedHandles } });
+            }
+            if (deletedIds.length > 0) {
+              deleteConditions.push({ shopifyId: { in: deletedIds } });
+              deleteConditions.push({
+                shopifyId: { in: deletedIds.map(id => `gid://shopify/Collection/${id}`) }
+              });
+            }
+
+            if (deleteConditions.length > 0) {
+              if (prisma && prisma.collection) {
+                const delRes = await prisma.collection.deleteMany({
+                  where: {
+                    shop: targetShop,
+                    OR: deleteConditions
+                  }
+                });
+                console.log(`[DELETE_COLLECTIONS_DB] Removed ${delRes.count} collections from database for shop ${targetShop}.`);
+              } else {
+                for (const h of deletedHandles) {
+                  await prisma.$executeRawUnsafe(
+                    `DELETE FROM public."Collection" WHERE shop = $1 AND handle = $2;`,
+                    targetShop,
+                    h
+                  );
+                }
+                for (const id of deletedIds) {
+                  await prisma.$executeRawUnsafe(
+                    `DELETE FROM public."Collection" WHERE shop = $1 AND ("shopifyId" = $2 OR "shopifyId" = $3);`,
+                    targetShop,
+                    id,
+                    `gid://shopify/Collection/${id}`
+                  );
+                }
+                console.log(`[DELETE_COLLECTIONS_DB] Removed deleted collections via raw SQL for shop ${targetShop}.`);
+              }
+            }
+          } catch (dbDelErr) {
+            console.error('[DELETE_COLLECTIONS_DB_ERROR] Failed to delete collections from database:', dbDelErr);
           }
 
           sendEvent('complete', {

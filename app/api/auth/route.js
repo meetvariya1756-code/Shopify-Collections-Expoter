@@ -29,7 +29,7 @@ export async function GET(request) {
   // Store state in cookie for validation in callback
   response.cookies.set('shopify_oauth_state', state, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 300,
     path: '/'
