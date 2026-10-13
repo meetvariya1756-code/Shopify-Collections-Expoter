@@ -19,16 +19,18 @@ const PUBLIC_PATHS = [
   '/api/auth',
   '/api/auth/callback',
   '/api/shopify/auth/callback',
-  '/api/webhooks'
+  '/api/webhooks',
+  '/api/chat'
 ];
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // 1. Bypass static files, Next.js internal assets, and favicon
+  // 1. Bypass static files, Next.js internal assets, uploads, and favicon
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
+    pathname.startsWith('/uploads') ||
     pathname === '/favicon.ico' ||
     pathname.endsWith('.png') ||
     pathname.endsWith('.jpg') ||

@@ -24,15 +24,37 @@ import {
   Layers,
   X,
   Eye,
-  EyeOff
+  EyeOff,
+  MessageSquare,
+  Headphones,
+  Phone
 } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { useAuth } from '@/components/AuthProvider';
+import AdminSupportConsole from '@/components/AdminSupportConsole';
 
 export default function AdminDashboardPage() {
   const { user, loading: authLoading, isAdmin } = useAuth();
   const router = useRouter();
+
+  // Active tab state
+  const [adminTab, setAdminTab] = useState('users'); // 'users' | 'support'
+  const [supportAlerts, setSupportAlerts] = useState({ callRequestsCount: 0, humanRequestsCount: 0, pendingCount: 0, totalUnread: 0 });
+
+  useEffect(() => {
+    const fetchSupportAlerts = async () => {
+      try {
+        const res = await axios.get('/api/admin/chat?status=all');
+        if (res.data?.summary) {
+          setSupportAlerts(res.data.summary);
+        }
+      } catch (_) {}
+    };
+    fetchSupportAlerts();
+    const interval = setInterval(fetchSupportAlerts, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Stats state
   const [stats, setStats] = useState({
@@ -424,6 +446,82 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
+        {/* Admin Navigation Tabs */}
+        <div
+          id="admin-nav-tabs"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            marginBottom: 24,
+            borderBottom: '1px solid #E2E8F0',
+            paddingBottom: 12
+          }}
+        >
+          <button
+            id="tab-btn-users"
+            onClick={() => setAdminTab('users')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: 'none',
+              backgroundColor: adminTab === 'users' ? '#4F46E5' : '#F1F5F9',
+              color: adminTab === 'users' ? '#FFFFFF' : '#475569',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.15s'
+            }}
+          >
+            <Users size={16} />
+            <span>User Management</span>
+          </button>
+
+          <button
+            id="tab-btn-support"
+            onClick={() => setAdminTab('support')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: 'none',
+              backgroundColor: adminTab === 'support' ? '#4F46E5' : '#F1F5F9',
+              color: adminTab === 'support' ? '#FFFFFF' : '#475569',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'all 0.15s'
+            }}
+          >
+            <Headphones size={16} />
+            <span>Live Support & Chat</span>
+            {(supportAlerts.callRequestsCount > 0 || supportAlerts.humanRequestsCount > 0 || supportAlerts.totalUnread > 0) && (
+              <span
+                style={{
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  borderRadius: 9999,
+                  padding: '1px 6px',
+                  fontSize: 11,
+                  fontWeight: 800
+                }}
+              >
+                {supportAlerts.callRequestsCount + supportAlerts.humanRequestsCount + supportAlerts.totalUnread}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {adminTab === 'support' ? (
+          <AdminSupportConsole currentUser={user} />
+        ) : (
+          <>
         {/* 1. Summary Cards */}
         <section
           id="admin-summary-cards"
@@ -1081,6 +1179,8 @@ export default function AdminDashboardPage() {
             </table>
           </div>
         </section>
+        </>
+        )}
       </main>
 
       {/* ── MODAL: Add User ──────────────────────────────────────────────── */}

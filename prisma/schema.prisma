@@ -120,3 +120,59 @@ model ImportItem {
 
   @@index([importJobId])
 }
+
+model SupportConversation {
+  id                  String              @id @default(uuid())
+  shop                String
+  customerEmail       String
+  customerName        String?
+  customerPhone       String?
+  supportType         String              @default("chat") // "chat" | "call"
+  callRequested       Boolean             @default(false)
+  callTopic           String?
+  callPreferredTime   String?
+  humanRequested      Boolean             @default(false)
+  status              String              @default("Pending") // "Pending" | "In Progress" | "Resolved" | "Closed"
+  lastMessage         String?
+  lastMessageAt       DateTime            @default(now())
+  unreadAdminCount    Int                 @default(0)
+  unreadCustomerCount Int                 @default(0)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  messages            SupportMessage[]
+  attachments         SupportAttachment[]
+
+  @@index([shop])
+  @@index([status])
+}
+
+model SupportMessage {
+  id             String              @id @default(uuid())
+  conversationId String
+  conversation   SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         String              // "customer" | "admin" | "bot" | "system"
+  senderName     String?
+  messageType    String              @default("text") // "text" | "audio" | "image" | "video" | "file" | "system"
+  content        String?             @db.Text
+  fileUrl        String?             @db.Text
+  fileName       String?
+  fileSize       Int?
+  fileMime       String?
+  createdAt      DateTime            @default(now())
+
+  @@index([conversationId])
+}
+
+model SupportAttachment {
+  id             String              @id @default(uuid())
+  conversationId String
+  conversation   SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  fileUrl        String              @db.Text
+  fileName       String
+  fileSize       Int
+  fileMime       String
+  filePath       String
+  createdAt      DateTime            @default(now())
+
+  @@index([conversationId])
+}

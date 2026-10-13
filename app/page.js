@@ -10,6 +10,7 @@ import CollectionExplorer from '@/components/CollectionExplorer';
 import ExcelImporter from '@/components/ExcelImporter';
 import LiveProgress from '@/components/LiveProgress';
 import ApiGuideModal from '@/components/ApiGuideModal';
+import CustomerChatWidget from '@/components/CustomerChatWidget';
 
 export default function DashboardPage() {
   const [shopifyAuthorizing, setShopifyAuthorizing] = useState(true);
@@ -497,6 +498,9 @@ export default function DashboardPage() {
 
       {/* API Guide Modal */}
       {showGuide && <ApiGuideModal onClose={() => setShowGuide(false)} />}
+
+      {/* Customer Support & Call Chatbot Widget */}
+      <CustomerChatWidget shop={shopDomain || sourceStore?.shopUrl || ''} />
     </div>
   );
 }
